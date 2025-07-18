@@ -1,0 +1,10 @@
+fastapi==0.111
+uvicorn[standard]==0.30
+python-multipart==0.0.9
+sqlalchemy==2.0
+alembic==1.13
+clickhouse-connect==0.7.12
+speechbrain==0.5.15
+transformers==4.41
+torch==2.3.1
+pyttsx3==2.98
