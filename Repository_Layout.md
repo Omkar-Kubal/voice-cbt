@@ -1,6 +1,8 @@
 voice-cbt/
+├── README.md
 ├── docker-compose.yml
 ├── .env.template
+├── package.json
 ├── backend/
 │   ├── Dockerfile
 │   ├── requirements.txt
@@ -35,4 +37,4 @@ voice-cbt/
 │   └── styles/
 │       └── globals.css
 └── nginx/
-    └── default.conf   # optional reverse proxy
+    └── default.conf   # optional reverse proxyi
