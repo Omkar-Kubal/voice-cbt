@@ -495,5 +495,6 @@ Your Voice CBT application is now fully set up with:
 - **[Deployment](docs/deployment/)** - Production deployment guides
 - **[Development](docs/development/)** - Project management and planning
 
-**Happy Therapy! 🎙️💙**#   v o i c e - c b t  
+**Happy Therapy! 🎙️💙**#   v o i c e - c b t 
+ 
  

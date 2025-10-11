@@ -7,7 +7,7 @@ import os
 import asyncio
 from typing import Dict, Any, Optional
 from .emotion_detector import emotion_detector, load_emotion_model
-from .reply_generator import reply_generator, load_reply_model
+from .reply_enhanced import load_reply_model
 from .speech_to_text_config import get_speech_to_text_service
 
 class ModelManager:
@@ -131,8 +131,10 @@ class ModelManager:
         """
         try:
             print("Loading RAG system...")
-            # RAG system is loaded as part of the reply generator
-            if reply_generator.use_rag and reply_generator.retriever is not None:
+            # Check if the enhanced reply generator is being used (which includes RAG)
+            from .reply_enhanced import load_reply_model
+            result = load_reply_model()
+            if result:
                 print("✅ RAG system loaded successfully")
                 return True
             else:

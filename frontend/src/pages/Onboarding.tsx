@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ProgressIndicator } from "@/components/onboarding/ProgressIndicator";
@@ -37,6 +37,17 @@ const Onboarding = () => {
   });
 
   const totalSteps = 8;
+
+  // Auto-advance for steps 5 and 6 (no continue buttons)
+  useEffect(() => {
+    if (currentStep === 5 || currentStep === 6) {
+      const timer = setTimeout(() => {
+        handleNext();
+      }, 3000); // Auto-advance after 3 seconds
+      
+      return () => clearTimeout(timer);
+    }
+  }, [currentStep]);
 
   const handleNext = () => {
     if (currentStep < totalSteps) {
@@ -105,11 +116,6 @@ const Onboarding = () => {
         return (
           <div className="relative">
             <ProvenToHelpScreen />
-            <div className="fixed bottom-8 right-8">
-              <Button onClick={handleNext} className="btn-hero">
-                Continue
-              </Button>
-            </div>
           </div>
         );
       
@@ -117,11 +123,6 @@ const Onboarding = () => {
         return (
           <div className="relative">
             <DifferentFromChatGPTScreen />
-            <div className="fixed bottom-8 right-8">
-              <Button onClick={handleNext} className="btn-hero">
-                Continue
-              </Button>
-            </div>
           </div>
         );
       

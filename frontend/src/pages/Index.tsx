@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import Navbar from '@/components/Navbar';
 
 const Index = () => {
+  const navigate = useNavigate();
   const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -111,6 +113,7 @@ const Index = () => {
               <Button 
                 size="lg" 
                 className="btn-hero text-lg px-12 py-6 rounded-2xl"
+                onClick={() => navigate('/login')}
               >
                 Start Yapping — it's free
               </Button>

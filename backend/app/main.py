@@ -24,7 +24,7 @@ origins = [
 # Add security middleware
 app.add_middleware(SecurityMiddleware)
 app.add_middleware(InputValidationMiddleware)
-app.add_middleware(AuthenticationMiddleware, protected_paths=["/api/v1/session", "/api/v1/mood"])
+app.add_middleware(AuthenticationMiddleware, protected_paths=["/api/v1/mood"])
 
 # Add trusted host middleware
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=["*"])

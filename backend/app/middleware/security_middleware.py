@@ -126,11 +126,11 @@ class SecurityMiddleware(BaseHTTPMiddleware):
     
     def _add_security_headers(self, response: Response) -> Response:
         """Add security headers to response."""
-        # Content Security Policy
+        # Content Security Policy - Allow Swagger UI resources
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline'; "
-            "style-src 'self' 'unsafe-inline'; "
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
             "img-src 'self' data: https:; "
             "connect-src 'self'; "
             "frame-ancestors 'none';"

@@ -12,7 +12,7 @@ from typing import Optional, List, Dict, Any
 import os
 
 # Database configuration
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/voicecbt")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/voicecbt")
 
 # Create engine
 engine = create_engine(DATABASE_URL, echo=False)

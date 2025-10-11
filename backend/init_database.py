@@ -12,8 +12,7 @@ from pathlib import Path
 # Add the app directory to the path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'app'))
 
-from app.models.database import db_manager, Base, engine
-from app.services.database_service import DatabaseService
+from app.models.database import db_manager, Base, engine, DatabaseOperations
 from sqlalchemy.orm import Session
 
 def create_database_tables():
@@ -34,19 +33,20 @@ def create_initial_data():
     try:
         # Get database session
         db = db_manager.get_db()
-        db_service = DatabaseService(db)
+        from app.models.database import DatabaseOperations
+        db_ops = DatabaseOperations(db)
         
         # Create a test user
-        test_user = db_service.create_or_get_user(
+        test_user = db_ops.create_user(
             username="test_user",
             email="test@example.com"
         )
         print(f"✅ Created test user: {test_user.username}")
         
         # Create a sample session
-        session_data = db_service.start_therapy_session(str(test_user.id))
-        if session_data:
-            print(f"✅ Created test session: {session_data['session_id']}")
+        session = db_ops.create_session(str(test_user.id))
+        if session:
+            print(f"✅ Created test session: {session.id}")
         
         # Create sample mood entries
         sample_moods = [
@@ -58,18 +58,17 @@ def create_initial_data():
         ]
         
         for mood in sample_moods:
-            db_service.log_mood_entry(
+            db_ops.create_mood_entry(
                 user_id=str(test_user.id),
                 emotion=mood["emotion"],
                 intensity=mood["intensity"],
-                context=mood["context"],
-                source="sample_data"
+                context=mood["context"]
             )
         
         print("✅ Created sample mood entries")
         
         # Create sample system metrics
-        db_service.log_system_metrics(
+        db_ops.create_system_metric(
             response_time_ms=1500,
             memory_usage_mb=512.5,
             cpu_usage_percent=25.3,
@@ -94,10 +93,11 @@ def verify_database_connection():
     try:
         # Test connection
         db = db_manager.get_db()
-        db_service = DatabaseService(db)
         
         # Test basic operations
-        user = db_service.create_or_get_user("connection_test")
+        from app.models.database import DatabaseOperations
+        db_ops = DatabaseOperations(db)
+        user = db_ops.create_user("connection_test", "test@example.com")
         if user:
             print("✅ Database connection successful")
             db.close()
@@ -129,17 +129,21 @@ def show_database_status():
     
     try:
         db = db_manager.get_db()
-        db_service = DatabaseService(db)
+        from app.models.database import DatabaseOperations
+        db_ops = DatabaseOperations(db)
         
-        # Get system health
-        health = db_service.get_system_health()
-        print(f"System Status: {health.get('status', 'unknown')}")
-        
-        if 'metrics' in health:
-            metrics = health['metrics']
-            print(f"Average Response Time: {metrics.get('average_response_time_ms', 0)}ms")
-            print(f"Average Memory Usage: {metrics.get('average_memory_usage_mb', 0)}MB")
-            print(f"Total Errors: {metrics.get('total_errors', 0)}")
+        # Get recent metrics
+        metrics = db_ops.get_recent_metrics(24)
+        if metrics:
+            latest = metrics[0]
+            print(f"Latest Response Time: {latest.response_time_ms}ms")
+            print(f"Latest Memory Usage: {latest.memory_usage_mb}MB")
+            print(f"Latest CPU Usage: {latest.cpu_usage_percent}%")
+            print(f"Active Sessions: {latest.active_sessions}")
+            print(f"Total Interactions: {latest.total_interactions}")
+            print(f"Error Count: {latest.error_count}")
+        else:
+            print("No metrics available yet")
         
         db.close()
         return True
