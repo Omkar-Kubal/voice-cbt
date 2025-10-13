@@ -1,6 +1,6 @@
 """
-Emotion detection service using the trained emotion model.
-This service loads and uses the actual trained emotion recognition model.
+Enhanced Emotion detection service with multiple approaches.
+This service provides both simple and advanced emotion detection.
 """
 
 import os
@@ -8,8 +8,15 @@ import torch
 import torch.nn as nn
 import numpy as np
 import librosa
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Tuple
 import pickle
+import logging
+
+# Import our enhanced emotion detection modules
+from .emotion_detector_enhanced import HybridEmotionDetector, detect_emotion_hybrid
+from .emotion_model_manager import initialize_emotion_models, detect_emotion_with_model, get_emotion_model_status
+
+logger = logging.getLogger(__name__)
 
 class EmotionModel(nn.Module):
     """
@@ -239,3 +246,62 @@ def load_emotion_model() -> bool:
         True if model loaded successfully
     """
     return emotion_detector.load_model()
+
+# Enhanced emotion detection functions
+def detect_emotion_enhanced(audio_path: Optional[str] = None, text: Optional[str] = None) -> Dict[str, float]:
+    """
+    Enhanced emotion detection using multiple approaches.
+    """
+    try:
+        # Try advanced model first
+        if audio_path and os.path.exists(audio_path):
+            model_emotions = detect_emotion_with_model(audio_path)
+            if model_emotions and any(v > 0.1 for v in model_emotions.values()):
+                return model_emotions
+        
+        # Fall back to hybrid approach
+        return detect_emotion_hybrid(audio_path=audio_path, text=text)
+        
+    except Exception as e:
+        logger.error(f"Error in enhanced emotion detection: {e}")
+        return {'neutral': 1.0}
+
+def initialize_emotion_detection() -> bool:
+    """Initialize the emotion detection system."""
+    try:
+        # Initialize models
+        model_success = initialize_emotion_models()
+        
+        if model_success:
+            logger.info("Emotion detection models initialized successfully")
+        else:
+            logger.warning("Emotion detection models not available, using fallback")
+        
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error initializing emotion detection: {e}")
+        return False
+
+def get_emotion_detection_status() -> Dict[str, Any]:
+    """Get the status of emotion detection capabilities."""
+    try:
+        model_status = get_emotion_model_status()
+        
+        return {
+            'emotion_detection_available': True,
+            'model_loaded': model_status.get('model_loaded', False),
+            'fallback_available': True,
+            'supported_emotions': ['angry', 'disgust', 'fear', 'happy', 'neutral', 'sad', 'surprise'],
+            'model_status': model_status
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting emotion detection status: {e}")
+        return {
+            'emotion_detection_available': False,
+            'error': str(e)
+        }
+
+# Global emotion detector instance
+emotion_detector = EmotionDetector()

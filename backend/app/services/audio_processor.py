@@ -173,3 +173,6 @@ def process_audio_for_transcription(base64_audio: str) -> Tuple[np.ndarray, int,
         Tuple of (processed_audio, sample_rate, temp_file_path)
     """
     return audio_processor.process_base64_audio(base64_audio)
+
+# Global audio processor instance
+audio_processor = AudioProcessor()

@@ -12,6 +12,7 @@ import { WhatBringsYouScreen } from "@/components/onboarding/WhatBringsYouScreen
 import { HowDidYouHearScreen } from "@/components/onboarding/HowDidYouHearScreen";
 import { SessionTypeScreen } from "@/components/onboarding/SessionTypeScreen";
 import { ArrowLeft } from "lucide-react";
+import { useUserSessionContext } from "@/components/auth/UserSessionProvider";
 
 interface OnboardingData {
   feeling: string;
@@ -25,12 +26,13 @@ interface OnboardingData {
 
 const Onboarding = () => {
   const navigate = useNavigate();
+  const { user } = useUserSessionContext();
   const [currentStep, setCurrentStep] = useState(1);
   const [onboardingData, setOnboardingData] = useState<OnboardingData>({
     feeling: "",
     goal: "",
     emotion: "",
-    name: "",
+    name: user?.name || "",
     whatBrings: "",
     howHeard: "",
     sessionType: ""
@@ -48,6 +50,22 @@ const Onboarding = () => {
       return () => clearTimeout(timer);
     }
   }, [currentStep]);
+
+  // Skip name step if user already has a name
+  useEffect(() => {
+    if (user?.name && currentStep === 4) {
+      // User already has a name, skip to next step
+      handleNext();
+    }
+  }, [user?.name, currentStep]);
+
+  // If user is returning (not new), skip onboarding entirely
+  useEffect(() => {
+    if (user && !user.isNewUser) {
+      // Returning user, skip onboarding
+      navigate('/app');
+    }
+  }, [user, navigate]);
 
   const handleNext = () => {
     if (currentStep < totalSteps) {

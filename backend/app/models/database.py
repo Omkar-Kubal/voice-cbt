@@ -5,14 +5,25 @@ Database models and connection management for Voice CBT application.
 from sqlalchemy import create_engine, Column, String, Integer, Float, DateTime, Text, Boolean, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
-from sqlalchemy.dialects.postgresql import UUID
-import uuid
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 import os
+import uuid
 
-# Database configuration
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/voicecbt")
+# Database configuration - supports both SQLite and PostgreSQL
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./voice_cbt.db")
+
+# SQLite doesn't support UUID, so we'll use String for IDs
+if DATABASE_URL.startswith("sqlite"):
+    # Use String for SQLite compatibility
+    ID_TYPE = String(36)
+    def UUID_DEFAULT():
+        return str(uuid.uuid4())
+else:
+    # Use UUID for PostgreSQL
+    from sqlalchemy.dialects.postgresql import UUID
+    ID_TYPE = UUID(as_uuid=True)
+    UUID_DEFAULT = uuid.uuid4
 
 # Create engine
 engine = create_engine(DATABASE_URL, echo=False)
@@ -24,7 +35,7 @@ class User(Base):
     """User model for storing user information."""
     __tablename__ = "users"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(ID_TYPE, primary_key=True, default=UUID_DEFAULT)
     username = Column(String(50), unique=True, nullable=False)
     email = Column(String(100), unique=True, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -35,8 +46,8 @@ class Session(Base):
     """Therapy session model."""
     __tablename__ = "sessions"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), nullable=False)
+    id = Column(ID_TYPE, primary_key=True, default=UUID_DEFAULT)
+    user_id = Column(ID_TYPE, nullable=False)
     started_at = Column(DateTime, default=datetime.utcnow)
     ended_at = Column(DateTime, nullable=True)
     duration_minutes = Column(Integer, nullable=True)
@@ -47,9 +58,9 @@ class Interaction(Base):
     """Individual interaction within a session."""
     __tablename__ = "interactions"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    session_id = Column(UUID(as_uuid=True), nullable=False)
-    user_id = Column(UUID(as_uuid=True), nullable=False)
+    id = Column(ID_TYPE, primary_key=True, default=UUID_DEFAULT)
+    session_id = Column(ID_TYPE, nullable=False)
+    user_id = Column(ID_TYPE, nullable=False)
     timestamp = Column(DateTime, default=datetime.utcnow)
     
     # Audio and transcription data
@@ -74,8 +85,8 @@ class MoodEntry(Base):
     """Mood tracking entries."""
     __tablename__ = "mood_entries"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), nullable=False)
+    id = Column(ID_TYPE, primary_key=True, default=UUID_DEFAULT)
+    user_id = Column(ID_TYPE, nullable=False)
     timestamp = Column(DateTime, default=datetime.utcnow)
     
     # Mood data
@@ -85,14 +96,14 @@ class MoodEntry(Base):
     triggers = Column(JSON, nullable=True)
     
     # Additional metadata
-    session_id = Column(UUID(as_uuid=True), nullable=True)
+    session_id = Column(ID_TYPE, nullable=True)
     source = Column(String(20), default="manual")  # manual, voice, api
 
 class SystemMetrics(Base):
     """System performance and usage metrics."""
     __tablename__ = "system_metrics"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(ID_TYPE, primary_key=True, default=UUID_DEFAULT)
     timestamp = Column(DateTime, default=datetime.utcnow)
     
     # Performance metrics
@@ -128,12 +139,12 @@ class DatabaseManager:
     def create_tables(self):
         """Create all database tables."""
         Base.metadata.create_all(bind=self.engine)
-        print("✅ Database tables created successfully")
+        print("Database tables created successfully")
     
     def drop_tables(self):
         """Drop all database tables."""
         Base.metadata.drop_all(bind=self.engine)
-        print("✅ Database tables dropped successfully")
+        print("Database tables dropped successfully")
     
     def reset_database(self):
         """Reset database by dropping and recreating tables."""

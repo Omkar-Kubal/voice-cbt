@@ -3,20 +3,89 @@ from pydantic import BaseModel
 from datetime import datetime
 from ..models.schemas import AudioRequest, TherapeuticResponse
 from ..models.database import get_database
-from ..services import (
-    emotion_detector, 
-    tts, 
-    speech_to_text_config,
-    audio_processor
-)
+from ..services import tts
+from ..services.emotion_detector import emotion_detector
+from ..services.audio_processor import audio_processor
+from ..services import speech_to_text_config
 from ..services.reply_enhanced import generate_reply
 from ..services.conversation_memory import conversation_memory
 from ..services.enhanced_emotion_detector import enhanced_emotion_detector
 from ..services.progress_tracker import progress_tracker
 from ..services.interactive_features import interactive_features
 from ..services.database_service import DatabaseService
+from ..services.enhanced_response_generator import generate_enhanced_response
+from ..services.enhanced_tts import synthesize_enhanced_speech
+from ..services.enhanced_audio_processor import process_enhanced_audio
+from ..services.response_optimizer import ResponseOptimizer
+from ..services.adaptive_response_system import AdaptiveResponseSystem
+from ..services.emotional_intelligence_engine import EmotionalIntelligenceEngine
 
 router = APIRouter()
+
+# Initialize advanced services
+response_optimizer = ResponseOptimizer()
+adaptive_system = AdaptiveResponseSystem()
+emotional_engine = EmotionalIntelligenceEngine()
+
+@router.post("/process/enhanced")
+async def process_enhanced_audio_input(
+    audio_data: str,
+    user_id: str = None,
+    session_id: str = None,
+    db = Depends(get_database)
+):
+    """
+    Enhanced audio processing with advanced features.
+    """
+    try:
+        # Process audio with enhanced features
+        audio_result = process_enhanced_audio(audio_data, user_id, session_id)
+        
+        if not audio_result["success"]:
+            raise HTTPException(status_code=400, detail=audio_result["error"])
+        
+        return {
+            "success": True,
+            "audio_analysis": audio_result["audio_analysis"],
+            "quality_score": audio_result["quality_score"],
+            "audio_features": audio_result["audio_features"],
+            "processing_time": audio_result["processing_time"],
+            "recommendations": audio_result.get("recommendations", [])
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/tts/enhanced")
+async def generate_enhanced_voice(
+    text: str,
+    emotion: str = "neutral",
+    voice_instructions: dict = None
+):
+    """
+    Generate enhanced voice synthesis with emotion-aware parameters.
+    """
+    try:
+        result = synthesize_enhanced_speech(
+            text,
+            emotion,
+            voice_instructions=voice_instructions
+        )
+        
+        if not result["success"]:
+            raise HTTPException(status_code=400, detail=result.get("error", "TTS generation failed"))
+        
+        return {
+            "success": True,
+            "output_file": result.get("output_file"),
+            "file_size": result.get("file_size"),
+            "emotion": emotion,
+            "voice_parameters": result.get("voice_parameters"),
+            "duration_estimate": result.get("duration_estimate")
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/session/start", response_model=TherapeuticResponse)
 async def start_session(request: AudioRequest, db = Depends(get_database)):
@@ -90,16 +159,40 @@ async def start_session(request: AudioRequest, db = Depends(get_database)):
             print(f"Emotion insights: {insights}")
             print(f"Analysis details: {emotion_analysis}")
 
-        # Step 4: Generate therapeutic response using RAG and conversation memory
-        print("Generating therapeutic response...")
+        # Step 4: Generate enhanced therapeutic response
+        print("Generating enhanced therapeutic response...")
         
         # Generate or get session ID for conversation memory
         if not session_id:
             session_id = f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
             conversation_memory.start_session(session_id, str(user.id) if user else None)
         
-        response_text = generate_reply(transcribed_text, emotion_label, session_id)
-        print(f"Generated response: {response_text}")
+        # Get conversation history for context
+        conversation_history = conversation_memory.get_session_history(session_id)
+        
+        # Get user profile for personalization
+        user_profile = None
+        if user:
+            user_profile = {
+                "preferences": user.preferences or {},
+                "therapy_style": user.preferences.get("therapy_style", "supportive") if user.preferences else "supportive"
+            }
+        
+        # Generate enhanced response
+        enhanced_response = generate_enhanced_response(
+            transcribed_text,
+            emotion_label,
+            conversation_history,
+            user_profile
+        )
+        
+        response_text = enhanced_response["text"]
+        voice_instructions = enhanced_response.get("voice_instructions", {})
+        techniques_used = enhanced_response.get("techniques_used", [])
+        
+        print(f"Generated enhanced response: {response_text}")
+        print(f"Techniques used: {techniques_used}")
+        print(f"Voice instructions: {voice_instructions}")
         
         # Add conversation exchange to memory
         conversation_memory.add_exchange(session_id, transcribed_text, emotion_label, response_text)
@@ -133,6 +226,23 @@ async def start_session(request: AudioRequest, db = Depends(get_database)):
         )
 
         # Return the structured response
+        # Step 8: Generate enhanced voice response
+        print("Generating enhanced voice response...")
+        try:
+            voice_result = synthesize_enhanced_speech(
+                response_text,
+                emotion_label,
+                voice_instructions=voice_instructions
+            )
+            
+            if voice_result["success"]:
+                print(f"Enhanced voice generated successfully")
+                print(f"Voice parameters: {voice_result.get('voice_parameters', {})}")
+            else:
+                print(f"Enhanced voice generation failed: {voice_result.get('error', 'Unknown error')}")
+        except Exception as e:
+            print(f"Error generating enhanced voice: {e}")
+
         return TherapeuticResponse(
             response_text=response_text,
             emotion=emotion_label,
@@ -298,3 +408,157 @@ async def create_guided_session(request: dict):
         return {"guided_session": session}
     except Exception as e:
         return {"error": f"Failed to create guided session: {str(e)}"}
+
+# Advanced Response Optimization Endpoints
+
+@router.post("/response/optimize")
+async def optimize_response(request: dict):
+    """
+    Optimize AI response for maximum therapeutic impact.
+    """
+    try:
+        base_response = request.get("response", "")
+        user_emotion = request.get("emotion", "neutral")
+        session_context = request.get("session_context", {})
+        user_profile = request.get("user_profile", {})
+        
+        optimization_result = response_optimizer.optimize_response(
+            base_response, user_emotion, session_context, user_profile
+        )
+        
+        return {
+            "optimized_response": optimization_result["optimized_response"],
+            "therapeutic_technique": optimization_result["therapeutic_technique"],
+            "follow_up_questions": optimization_result["follow_up_questions"],
+            "alternative_responses": optimization_result["alternative_responses"],
+            "optimization_score": optimization_result["optimization_score"],
+            "therapeutic_value": optimization_result["therapeutic_value"],
+            "empathy_level": optimization_result["empathy_level"]
+        }
+    except Exception as e:
+        return {"error": f"Failed to optimize response: {str(e)}"}
+
+@router.post("/response/adapt")
+async def adapt_response(request: dict):
+    """
+    Adapt response based on real-time user engagement and feedback.
+    """
+    try:
+        base_response = request.get("response", "")
+        user_id = request.get("user_id", "anonymous")
+        current_emotion = request.get("emotion", "neutral")
+        session_context = request.get("session_context", {})
+        real_time_metrics = request.get("real_time_metrics", {})
+        
+        adaptation_result = adaptive_system.adapt_response(
+            base_response, user_id, current_emotion, session_context, real_time_metrics
+        )
+        
+        return {
+            "adapted_response": adaptation_result["adapted_response"],
+            "adaptation_strategy": adaptation_result["adaptation_strategy"],
+            "adaptive_follow_ups": adaptation_result["adaptive_follow_ups"],
+            "engagement_level": adaptation_result["engagement_level"],
+            "adaptation_score": adaptation_result["adaptation_score"],
+            "predicted_effectiveness": adaptation_result["predicted_effectiveness"]
+        }
+    except Exception as e:
+        return {"error": f"Failed to adapt response: {str(e)}"}
+
+@router.post("/emotion/analyze")
+async def analyze_emotional_state(request: dict):
+    """
+    Comprehensive emotional state analysis using advanced AI.
+    """
+    try:
+        text_input = request.get("text", "")
+        audio_features = request.get("audio_features")
+        user_history = request.get("user_history")
+        
+        emotional_analysis = emotional_engine.analyze_emotional_state(
+            text_input, audio_features, user_history
+        )
+        
+        return {
+            "primary_emotion": emotional_analysis["primary_emotion"],
+            "emotion_confidence": emotional_analysis["emotion_confidence"],
+            "emotional_intensity": emotional_analysis["emotional_intensity"],
+            "emotional_patterns": emotional_analysis["emotional_patterns"],
+            "potential_triggers": emotional_analysis["potential_triggers"],
+            "insights": emotional_analysis["insights"],
+            "recommended_interventions": emotional_analysis["recommended_interventions"],
+            "emotional_safety": emotional_analysis["emotional_safety"],
+            "therapeutic_approach": emotional_analysis["therapeutic_approach"]
+        }
+    except Exception as e:
+        return {"error": f"Failed to analyze emotional state: {str(e)}"}
+
+@router.post("/response/advanced")
+async def generate_advanced_response(request: dict):
+    """
+    Generate the most advanced therapeutic response using all optimization techniques.
+    """
+    try:
+        user_input = request.get("user_input", "")
+        user_id = request.get("user_id", "anonymous")
+        session_context = request.get("session_context", {})
+        user_profile = request.get("user_profile", {})
+        audio_features = request.get("audio_features")
+        
+        # Step 1: Analyze emotional state
+        emotional_analysis = emotional_engine.analyze_emotional_state(
+            user_input, audio_features, user_profile.get("history")
+        )
+        
+        # Step 2: Generate base enhanced response
+        base_response = generate_enhanced_response(
+            user_input, user_profile, session_context, emotional_analysis
+        )
+        
+        # Step 3: Optimize the response
+        optimization_result = response_optimizer.optimize_response(
+            base_response, 
+            emotional_analysis["primary_emotion"], 
+            session_context, 
+            user_profile
+        )
+        
+        # Step 4: Adapt based on real-time metrics
+        real_time_metrics = {
+            "response_time": request.get("response_time", 0),
+            "emotion_intensity": emotional_analysis["emotional_intensity"],
+            "conversation_flow": request.get("conversation_flow", "normal"),
+            "comfort_level": request.get("comfort_level", 0.5)
+        }
+        
+        adaptation_result = adaptive_system.adapt_response(
+            optimization_result["optimized_response"],
+            user_id,
+            emotional_analysis["primary_emotion"],
+            session_context,
+            real_time_metrics
+        )
+        
+        # Step 5: Generate enhanced TTS
+        enhanced_audio = synthesize_enhanced_speech(
+            adaptation_result["adapted_response"],
+            emotional_analysis["primary_emotion"],
+            emotional_analysis["emotional_intensity"]
+        )
+        
+        return {
+            "final_response": adaptation_result["adapted_response"],
+            "enhanced_audio": enhanced_audio,
+            "emotional_analysis": emotional_analysis,
+            "optimization_details": optimization_result,
+            "adaptation_details": adaptation_result,
+            "therapeutic_technique": optimization_result["therapeutic_technique"],
+            "follow_up_questions": adaptation_result["adaptive_follow_ups"],
+            "recommended_interventions": emotional_analysis["recommended_interventions"],
+            "response_quality_score": (
+                optimization_result["optimization_score"] + 
+                adaptation_result["adaptation_score"]
+            ) / 2
+        }
+    except Exception as e:
+        return {"error": f"Failed to generate advanced response: {str(e)}"}

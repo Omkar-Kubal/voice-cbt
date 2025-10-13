@@ -11,6 +11,8 @@ RUN apt-get update && apt-get install -y \
     curl \
     libsndfile1 \
     ffmpeg \
+    espeak \
+    espeak-data \
     && rm -rf /var/lib/apt/lists/*
 
 # Create app directory

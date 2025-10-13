@@ -83,31 +83,19 @@ class LLMIntegration:
         )
         
         try:
-            response = requests.post(
-                "https://api.openai.com/v1/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {self.openai_api_key}",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "model": self.openai_model,
-                    "messages": messages,
-                    "max_tokens": 300,
-                    "temperature": 0.7,
-                    "presence_penalty": 0.1,
-                    "frequency_penalty": 0.1
-                },
-                timeout=30
+            from openai import OpenAI
+            client = OpenAI(api_key=self.openai_api_key)
+            
+            response = client.chat.completions.create(
+                model=self.openai_model,
+                messages=messages,
+                max_tokens=300,
+                temperature=0.7,
+                presence_penalty=0.1,
+                frequency_penalty=0.1
             )
             
-            if response.status_code == 200:
-                result = response.json()
-                return result["choices"][0]["message"]["content"].strip()
-            else:
-                logger.error(f"OpenAI API error: {response.status_code} - {response.text}")
-                return self._generate_fallback_response(
-                    user_message, emotion, context, session_history, therapeutic_style
-                )
+            return response.choices[0].message.content.strip()
                 
         except Exception as e:
             logger.error(f"OpenAI API request failed: {e}")

@@ -239,6 +239,21 @@ class ConversationMemory:
         
         minutes = int(duration.total_seconds() / 60)
         return f"{minutes} minutes"
+    
+    def get_session_history(self, session_id: str) -> List[Dict[str, Any]]:
+        """
+        Get conversation history for a session.
+        
+        Args:
+            session_id: Session identifier
+            
+        Returns:
+            List of conversation exchanges
+        """
+        if session_id not in self.sessions:
+            return []
+        
+        return self.sessions[session_id]["conversation_history"]
 
 # Global conversation memory instance
 conversation_memory = ConversationMemory()

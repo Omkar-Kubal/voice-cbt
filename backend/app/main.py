@@ -1,8 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from dotenv import load_dotenv
+import os
 
-from .api import audio, mood, monitoring
+# Load environment variables
+load_dotenv('config.env')
+
+from .api import audio, mood, monitoring, analytics, auth
 from .middleware.security_middleware import SecurityMiddleware, AuthenticationMiddleware, InputValidationMiddleware
 from .core.security import security_manager
 
@@ -42,6 +47,8 @@ app.add_middleware(
 app.include_router(audio.router, prefix="/api/v1")
 app.include_router(mood.router, prefix="/api/v1")
 app.include_router(monitoring.router, prefix="/api/v1")
+app.include_router(analytics.router, prefix="/api/v1")
+app.include_router(auth.router, prefix="/api/v1")
 
 @app.get("/")
 def read_root():
@@ -77,6 +84,11 @@ async def startup_event():
             print("\n⚠️  Some services are not available, but basic functionality should work.")
         
         print("="*60)
+        
+        # Start monitoring service
+        from .services.monitoring import monitoring_service
+        monitoring_service.start_monitoring()
+        print("📊 Monitoring service started")
         
     except Exception as e:
         print(f"❌ Error during model initialization: {e}")

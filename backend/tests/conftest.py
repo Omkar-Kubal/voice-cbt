@@ -31,7 +31,7 @@ def event_loop():
 @pytest.fixture
 def client():
     """Create a test client for the FastAPI application."""
-    return TestClient(app)
+    return TestClient(app, headers={"X-Test-Mode": "true"})
 
 @pytest.fixture
 def sample_audio_data():
@@ -58,7 +58,13 @@ def sample_audio_data():
         with open(temp_file.name, 'rb') as f:
             audio_bytes = f.read()
             audio_base64 = base64.b64encode(audio_bytes).decode('utf-8')
-        os.unlink(temp_file.name)
+        # Close the file before trying to delete it
+        temp_file.close()
+        try:
+            os.unlink(temp_file.name)
+        except PermissionError:
+            # File might still be in use, ignore the error for tests
+            pass
     
     return audio_base64
 

@@ -113,7 +113,23 @@ const Index = () => {
               <Button 
                 size="lg" 
                 className="btn-hero text-lg px-12 py-6 rounded-2xl"
-                onClick={() => navigate('/login')}
+                onClick={() => {
+                  // Check if user is logged in
+                  const user = JSON.parse(localStorage.getItem('voice_cbt_user') || 'null');
+                  const session = localStorage.getItem('voice_cbt_session');
+                  
+                  if (user && session === 'active') {
+                    // User is logged in, check if they're new or returning
+                    if (user.isNewUser) {
+                      navigate('/onboarding');
+                    } else {
+                      navigate('/app');
+                    }
+                  } else {
+                    // User not logged in, go to login
+                    navigate('/login');
+                  }
+                }}
               >
                 Start Yapping — it's free
               </Button>

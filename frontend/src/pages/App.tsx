@@ -1,10 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Mic, MicOff, MessageSquare, Send, Volume2 } from 'lucide-react';
+import { Mic, MicOff, MessageSquare, Send, Volume2, Trash2 } from 'lucide-react';
 import VoiceSphere from '@/components/VoiceSphere';
 import TextInput from '@/components/TextInput';
 import ChatHistory from '@/components/ChatHistory';
+import UserProfile from '@/components/auth/UserProfile';
+import EnhancedVoiceInterface from '@/components/EnhancedVoiceInterface';
+import { useUserSessionContext } from '@/components/auth/UserSessionProvider';
 
 // Types for our conversation state
 interface Message {
@@ -25,6 +28,9 @@ interface SessionState {
 }
 
 const App = () => {
+  // Get user session context
+  const { user, isLoggedIn } = useUserSessionContext();
+  
   // State management for the therapy session
   const [messages, setMessages] = useState<Message[]>([]);
   const [sessionState, setSessionState] = useState<SessionState>({
@@ -36,17 +42,94 @@ const App = () => {
     connectionStatus: 'connecting'
   });
 
+  // Clear chat function
+  const clearChat = () => {
+    if (user && isLoggedIn) {
+      // Clear localStorage
+      localStorage.removeItem(`voice_cbt_conversations_${user.id}`);
+      
+      // Reset messages with welcome message
+      const welcomeMessage: Message = {
+        id: 'welcome',
+        type: 'system',
+        content: `Hi ${user.name}! 👋 I'm your AI therapy companion. I'm here to listen, support, and help you explore your thoughts and feelings. How are you doing today?`,
+        timestamp: new Date(),
+        emotion: 'neutral'
+      };
+      setMessages([welcomeMessage]);
+    }
+  };
+
   // Refs for managing speech synthesis and recognition
   const speechSynthesisRef = useRef<SpeechSynthesisUtterance | null>(null);
-  const speechRecognitionRef = useRef<SpeechRecognition | null>(null);
+  const speechRecognitionRef = useRef<any>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+
+  // Load user's conversation history on mount
+  useEffect(() => {
+    if (user && isLoggedIn) {
+      const savedConversations = localStorage.getItem(`voice_cbt_conversations_${user.id}`);
+      if (savedConversations) {
+        try {
+          const parsedMessages = JSON.parse(savedConversations);
+          // Check if this is a fresh session (no messages today)
+          const today = new Date().toDateString();
+          const hasRecentMessages = parsedMessages.some((msg: Message) => 
+            new Date(msg.timestamp).toDateString() === today
+          );
+          
+          if (!hasRecentMessages) {
+            // Add welcome back message for returning users
+            const welcomeBackMessage: Message = {
+              id: 'welcome-back',
+              type: 'system',
+              content: `Welcome back, ${user.name}! 👋 Great to see you again. How are you feeling today?`,
+              timestamp: new Date(),
+              emotion: 'neutral'
+            };
+            setMessages([welcomeBackMessage, ...parsedMessages]);
+          } else {
+            setMessages(parsedMessages);
+          }
+        } catch (error) {
+          console.error('Error loading conversation history:', error);
+          // Add welcome message if parsing fails
+          const welcomeMessage: Message = {
+            id: 'welcome',
+            type: 'system',
+            content: `Hi ${user.name}! 👋 I'm your AI therapy companion. I'm here to listen, support, and help you explore your thoughts and feelings. How are you doing today?`,
+            timestamp: new Date(),
+            emotion: 'neutral'
+          };
+          setMessages([welcomeMessage]);
+        }
+      } else {
+        // First time user or no conversation history, add welcome message
+        const welcomeMessage: Message = {
+          id: 'welcome',
+          type: 'system',
+          content: `Hi ${user.name}! 👋 I'm your AI therapy companion. I'm here to listen, support, and help you explore your thoughts and feelings. How are you doing today?`,
+          timestamp: new Date(),
+          emotion: 'neutral'
+        };
+        setMessages([welcomeMessage]);
+      }
+    }
+  }, [user, isLoggedIn]);
+
+  // Save conversation history whenever messages change
+  useEffect(() => {
+    if (user && isLoggedIn && messages.length > 0) {
+      localStorage.setItem(`voice_cbt_conversations_${user.id}`, JSON.stringify(messages));
+    }
+  }, [messages, user, isLoggedIn]);
 
   // Initialize speech recognition and check backend connection on component mount
   useEffect(() => {
     // Initialize speech recognition
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       speechRecognitionRef.current = new SpeechRecognition();
       
       speechRecognitionRef.current.continuous = false;
@@ -84,10 +167,15 @@ const App = () => {
   // Check backend connection status
   const checkBackendConnection = async () => {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
       const response = await fetch('http://localhost:8000/', {
         method: 'GET',
-        timeout: 5000
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       
       if (response.ok) {
         setSessionState(prev => ({ 
@@ -218,33 +306,105 @@ const App = () => {
   // Text-to-Speech functionality with female voice
   const speakText = async (text: string): Promise<void> => {
     return new Promise((resolve) => {
+      // Prevent duplicate TTS calls
+      if (sessionState.isSpeaking) {
+        resolve();
+        return;
+      }
+      
       setSessionState(prev => ({ ...prev, isSpeaking: true }));
 
       // Stop any current speech
       if (speechSynthesisRef.current) {
-        speechSynthesis.speak(speechSynthesisRef.current);
+        speechSynthesis.cancel();
       }
 
       const utterance = new SpeechSynthesisUtterance(text);
       speechSynthesisRef.current = utterance;
 
-      // Try to find a female voice
-      const voices = speechSynthesis.getVoices();
-      const femaleVoice = voices.find(voice => 
-        voice.name.toLowerCase().includes('female') ||
-        voice.name.toLowerCase().includes('woman') ||
-        voice.name.toLowerCase().includes('samantha') ||
-        voice.name.toLowerCase().includes('karen') ||
-        voice.name.toLowerCase().includes('susan')
-      );
+      // Function to find and set female voice
+      const setFemaleVoice = () => {
+        const voices = speechSynthesis.getVoices();
+        console.log('Available voices:', voices.map(v => ({ name: v.name, lang: v.lang })));
+        
+        // Priority-based female voice search (best voices first)
+        const priorityFemaleVoices = [
+          'Microsoft Zira Desktop', 'Microsoft Hazel Desktop', 'Google Susan', 'Google Karen', 'Google Samantha',
+          'Samantha', 'Karen', 'Susan', 'Zira', 'Hazel', 'Victoria', 'Helen', 'Donna', 'Michelle',
+          'Microsoft Eva Desktop', 'Microsoft Catherine Desktop', 'Microsoft Linda Desktop',
+          'Google Emma', 'Google Amy', 'Google Lisa', 'Google Sarah', 'Google Anna'
+        ];
+        
+        // First try to find priority voices
+        let femaleVoice = voices.find(voice => 
+          priorityFemaleVoices.some(priorityName => 
+            voice.name.toLowerCase().includes(priorityName.toLowerCase())
+          )
+        );
+        
+        // If no priority voice found, do comprehensive search
+        if (!femaleVoice) {
+          femaleVoice = voices.find(voice => {
+            const name = voice.name.toLowerCase();
+            const lang = voice.lang.toLowerCase();
+            
+            // Check for female indicators in name
+            const femaleNames = [
+              'female', 'woman', 'lady', 'girl', 'samantha', 'karen', 'susan', 'mary', 'jane', 'lisa', 
+              'anna', 'sarah', 'emma', 'olivia', 'ava', 'isabella', 'sophia', 'charlotte', 'mia', 'amelia',
+              'zira', 'hazel', 'susan', 'karen', 'samantha', 'victoria', 'helen', 'donna', 'michelle'
+            ];
+            
+            // Check for female indicators in language
+            const femaleLang = ['en-us-female', 'en-gb-female', 'en-au-female'];
+            
+            return femaleNames.some(femaleName => name.includes(femaleName)) ||
+                   femaleLang.some(femaleLangCode => lang.includes(femaleLangCode)) ||
+                   name.includes('zira') || // Microsoft Zira (female)
+                   name.includes('hazel') || // Microsoft Hazel (female)
+                   name.includes('susan') || // Google Susan (female)
+                   name.includes('karen') || // Google Karen (female)
+                   name.includes('samantha'); // Google Samantha (female)
+          });
+        }
 
-      if (femaleVoice) {
-        utterance.voice = femaleVoice;
+        if (femaleVoice) {
+          utterance.voice = femaleVoice;
+          console.log('Selected female voice:', femaleVoice.name);
+          utterance.pitch = 1.1; // Normal pitch for female voices
+        } else {
+          console.log('No female voice found, using default voice with higher pitch');
+          // Try to find any voice that might sound more feminine
+          const allVoices = speechSynthesis.getVoices();
+          const alternativeVoice = allVoices.find(voice => 
+            voice.name.toLowerCase().includes('female') ||
+            voice.name.toLowerCase().includes('woman') ||
+            voice.name.toLowerCase().includes('lady')
+          );
+          
+          if (alternativeVoice) {
+            utterance.voice = alternativeVoice;
+            console.log('Using alternative voice:', alternativeVoice.name);
+            utterance.pitch = 1.2;
+          } else {
+            utterance.pitch = 1.4; // Even higher pitch for more feminine sound
+          }
+        }
+
+        utterance.rate = 0.9;
+        utterance.volume = 0.8;
+      };
+
+      // Try to set female voice immediately
+      setFemaleVoice();
+      
+      // If no voices are available yet, wait for them to load
+      if (speechSynthesis.getVoices().length === 0) {
+        speechSynthesis.onvoiceschanged = () => {
+          setFemaleVoice();
+          speechSynthesis.onvoiceschanged = null; // Remove listener after use
+        };
       }
-
-      utterance.rate = 0.9;
-      utterance.pitch = 1.1;
-      utterance.volume = 0.8;
 
       utterance.onend = () => {
         setSessionState(prev => ({ ...prev, isSpeaking: false }));
@@ -312,6 +472,7 @@ const App = () => {
         </div>
         
         <div className="flex items-center space-x-4">
+          <UserProfile />
           {sessionState.connectionStatus === 'disconnected' && (
             <Button
               onClick={checkBackendConnection}
@@ -339,6 +500,16 @@ const App = () => {
               </>
             )}
           </Button>
+          
+          <Button
+            onClick={clearChat}
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            Clear Chat
+          </Button>
         </div>
       </div>
 
@@ -352,25 +523,16 @@ const App = () => {
         {/* Input Area */}
         <div className="p-6 border-t border-slate-700">
           {sessionState.inputMode === 'voice' ? (
-            <div className="flex flex-col items-center space-y-6">
-              <VoiceSphere
-                isListening={sessionState.isListening}
-                isProcessing={sessionState.isProcessing}
-                isSpeaking={sessionState.isSpeaking}
-                onClick={handleVoiceSphereClick}
-                disabled={sessionState.connectionStatus === 'disconnected'}
-                aria-label={sessionState.isListening ? 'Stop listening' : 'Start voice input'}
-              />
-              <p className="text-slate-400 text-center max-w-md">
-                {sessionState.isListening 
-                  ? 'Speak now... I\'m listening to what you have to say.'
-                  : sessionState.isProcessing
-                  ? 'Processing your thoughts...'
-                  : sessionState.isSpeaking
-                  ? 'Let me respond...'
-                  : 'Click the sphere to start talking about what\'s on your mind.'}
-              </p>
-            </div>
+            <EnhancedVoiceInterface
+              onVoiceStart={() => setSessionState(prev => ({ ...prev, isListening: true }))}
+              onVoiceStop={() => setSessionState(prev => ({ ...prev, isListening: false }))}
+              onTextSubmit={handleTextInput}
+              isListening={sessionState.isListening}
+              isProcessing={sessionState.isProcessing}
+              isSpeaking={sessionState.isSpeaking}
+              currentEmotion={messages[messages.length - 1]?.emotion}
+              responseText={messages[messages.length - 1]?.content}
+            />
           ) : (
             <TextInput
               onSend={handleTextInput}

@@ -13,22 +13,49 @@ const Login = () => {
 
   const handleLogin = async (email: string, password: string) => {
     setIsLoading(true);
-    // TODO: Implement actual login logic
-    // For now, just navigate to onboarding
-    setTimeout(() => {
+    try {
+      // For now, create a simple session-based login
+      // In production, this would validate against your backend
+      const userData = {
+        id: 'user_' + Date.now(),
+        email: email,
+        name: email.split('@')[0],
+        isNewUser: false
+      };
+      
+      // Store user session
+      localStorage.setItem('voice_cbt_user', JSON.stringify(userData));
+      localStorage.setItem('voice_cbt_session', 'active');
+      
       setIsLoading(false);
-      navigate('/onboarding');
-    }, 1000);
+      navigate('/app');
+    } catch (error) {
+      console.error('Login error:', error);
+      setIsLoading(false);
+    }
   };
 
   const handleSignup = async (email: string, password: string, name: string) => {
     setIsLoading(true);
-    // TODO: Implement actual signup logic
-    // For now, just navigate to onboarding
-    setTimeout(() => {
+    try {
+      // Create new user session
+      const userData = {
+        id: 'user_' + Date.now(),
+        email: email,
+        name: name,
+        isNewUser: true
+      };
+      
+      // Store user session
+      localStorage.setItem('voice_cbt_user', JSON.stringify(userData));
+      localStorage.setItem('voice_cbt_session', 'active');
+      
       setIsLoading(false);
-      navigate('/onboarding');
-    }, 1000);
+      navigate('/app');
+    } catch (error) {
+      console.error('Signup error:', error);
+      setIsLoading(false);
+    }
   };
 
   return (

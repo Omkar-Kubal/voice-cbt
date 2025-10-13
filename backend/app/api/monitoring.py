@@ -124,16 +124,94 @@ async def get_usage_analytics(
         db_service = DatabaseService(db)
         
         # Get usage data from database
-        # This would need to be implemented based on your specific analytics needs
-        usage_data = {
-            "total_sessions": 0,  # Placeholder
-            "total_interactions": 0,  # Placeholder
-            "unique_users": 0,  # Placeholder
-            "average_session_duration": 0,  # Placeholder
-            "most_common_emotions": [],  # Placeholder
-            "peak_usage_hours": [],  # Placeholder
-            "period_days": days
-        }
+        try:
+            from ..models.database import get_database
+            from ..services.database_service import DatabaseService
+            from sqlalchemy import func, desc
+            from ..models.database import Session, User, MoodEntry
+            
+            db = next(get_database())
+            db_service = DatabaseService(db)
+            
+            # Calculate date range
+            from datetime import datetime, timedelta
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=days)
+            
+            # Get actual data from database
+            total_sessions = db.query(Session).filter(
+                Session.created_at >= start_date,
+                Session.created_at <= end_date
+            ).count()
+            
+            total_interactions = db.query(Session).filter(
+                Session.created_at >= start_date,
+                Session.created_at <= end_date
+            ).with_entities(func.sum(Session.interaction_count)).scalar() or 0
+            
+            unique_users = db.query(User).filter(
+                User.created_at >= start_date,
+                User.created_at <= end_date
+            ).count()
+            
+            # Calculate average session duration
+            sessions = db.query(Session).filter(
+                Session.created_at >= start_date,
+                Session.created_at <= end_date
+            ).all()
+            
+            avg_duration = 0
+            if sessions:
+                total_duration = sum([
+                    (session.updated_at - session.created_at).total_seconds() 
+                    for session in sessions if session.updated_at
+                ])
+                avg_duration = total_duration / len(sessions) / 60  # Convert to minutes
+            
+            # Get most common emotions
+            emotion_counts = db.query(
+                MoodEntry.emotion_label,
+                func.count(MoodEntry.emotion_label)
+            ).filter(
+                MoodEntry.timestamp >= start_date,
+                MoodEntry.timestamp <= end_date
+            ).group_by(MoodEntry.emotion_label).order_by(desc(func.count(MoodEntry.emotion_label))).limit(5).all()
+            
+            most_common_emotions = [{"emotion": emotion, "count": count} for emotion, count in emotion_counts]
+            
+            # Calculate peak usage hours
+            hour_counts = db.query(
+                func.extract('hour', Session.created_at),
+                func.count(Session.id)
+            ).filter(
+                Session.created_at >= start_date,
+                Session.created_at <= end_date
+            ).group_by(func.extract('hour', Session.created_at)).order_by(desc(func.count(Session.id))).limit(3).all()
+            
+            peak_usage_hours = [{"hour": int(hour), "sessions": int(count)} for hour, count in hour_counts]
+            
+            usage_data = {
+                "total_sessions": total_sessions,
+                "total_interactions": total_interactions,
+                "unique_users": unique_users,
+                "average_session_duration": round(avg_duration, 2),
+                "most_common_emotions": most_common_emotions,
+                "peak_usage_hours": peak_usage_hours,
+                "period_days": days
+            }
+            
+        except Exception as e:
+            # Fallback to placeholder data if database query fails
+            usage_data = {
+                "total_sessions": 0,
+                "total_interactions": 0,
+                "unique_users": 0,
+                "average_session_duration": 0,
+                "most_common_emotions": [],
+                "peak_usage_hours": [],
+                "period_days": days,
+                "error": str(e)
+            }
         
         return usage_data
         

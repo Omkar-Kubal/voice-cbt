@@ -6,7 +6,7 @@ This service handles the loading of emotion detection, dialogue generation, and 
 import os
 import asyncio
 from typing import Dict, Any, Optional
-from .emotion_detector import emotion_detector, load_emotion_model
+from .emotion_detector import emotion_detector, load_emotion_model, initialize_emotion_detection, get_emotion_detection_status
 from .reply_enhanced import load_reply_model
 from .speech_to_text_config import get_speech_to_text_service
 
@@ -63,18 +63,18 @@ class ModelManager:
     
     async def _load_emotion_model(self) -> bool:
         """
-        Load the emotion detection model.
+        Load the enhanced emotion detection system.
         
         Returns:
             True if loaded successfully
         """
         try:
-            print("Loading emotion detection model...")
-            success = load_emotion_model()
+            print("Loading enhanced emotion detection system...")
+            success = initialize_emotion_detection()
             if success:
-                print("✅ Emotion detection model loaded successfully")
+                print("✅ Enhanced emotion detection system loaded successfully")
             else:
-                print("❌ Emotion detection model failed to load")
+                print("❌ Enhanced emotion detection system failed to load")
             return success
         except Exception as e:
             print(f"❌ Error loading emotion model: {e}")
@@ -199,6 +199,15 @@ class ModelManager:
             (self.loading_status.get("dialogue_generation", False) or 
              self.loading_status.get("emotion_detection", False))
         )
+    
+    def is_system_ready(self) -> bool:
+        """
+        Check if the system is ready for use.
+        
+        Returns:
+            True if system is ready
+        """
+        return self.models_loaded and all(self.loading_status.values())
 
 # Global model manager instance
 model_manager = ModelManager()

@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { Menu, X, User, LogOut } from 'lucide-react';
+import { useUserSessionContext } from '@/components/auth/UserSessionProvider';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
+  const { user, isLoggedIn, logout } = useUserSessionContext();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -55,12 +58,59 @@ const Navbar = () => {
 
           {/* Auth Buttons */}
           <div className="flex items-center space-x-4">
-            <Button variant="ghost" className="btn-ghost">
-              Log In
-            </Button>
-            <Button className="btn-hero">
-              Sign Up
-            </Button>
+            {isLoggedIn ? (
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm">
+                    {user?.name?.charAt(0).toUpperCase() || 'U'}
+                  </div>
+                  <span className="text-sm font-medium">{user?.name}</span>
+                </div>
+                {user?.email?.includes('admin') ? (
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => window.location.href = '/admin'}
+                  >
+                    <User className="h-4 w-4 mr-2" />
+                    Admin Dashboard
+                  </Button>
+                ) : (
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => window.location.href = '/app'}
+                  >
+                    <User className="h-4 w-4 mr-2" />
+                    Start Session
+                  </Button>
+                )}
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={logout}
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Logout
+                </Button>
+              </div>
+            ) : (
+              <>
+                <Button 
+                  variant="ghost" 
+                  className="btn-ghost"
+                  onClick={() => window.location.href = '/login'}
+                >
+                  Log In
+                </Button>
+                <Button 
+                  className="btn-hero"
+                  onClick={() => window.location.href = '/signup'}
+                >
+                  Sign Up
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>

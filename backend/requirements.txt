@@ -1,39 +1,41 @@
-fastapi==0.111
-uvicorn[standard]==0.30
-python-multipart==0.0.9
-sqlalchemy==2.0
-alembic==1.13
-clickhouse-connect==0.7.12
-speechbrain==0.5.15
-transformers==4.41
-torch==2.3.1
-pyttsx3==2.98
-librosa==0.10.1
-scikit-learn==1.3.2
-pandas==2.1.4
-numpy==1.24.3
-langchain==0.1.0
-langchain-community==0.0.10
-chromadb==0.4.18
-sentence-transformers==2.2.2
-openai-whisper==20231117
-soundfile==0.12.1
-SpeechRecognition==3.10.0
+fastapi>=0.100.0
+uvicorn[standard]>=0.20.0
+python-multipart>=0.0.6
+sqlalchemy>=2.0.0
+alembic>=1.10.0
+clickhouse-connect>=0.6.0
+speechbrain>=0.5.0
+transformers>=4.30.0
+torch>=2.0.0
+pyttsx3>=2.90
+librosa>=0.10.0
+scikit-learn>=1.3.0
+pandas>=2.0.0
+numpy>=1.24.0
+langchain>=0.1.0
+langchain-community>=0.0.10
+chromadb>=0.4.0
+sentence-transformers>=2.2.0
+openai>=1.0.0
+soundfile>=0.12.1
+SpeechRecognition>=3.10.0
+openai-whisper>=20231117
+google-generativeai>=0.3.0
 # pyaudio==0.2.11  # Commented out due to Windows build issues
 # Alternative: Use pipwin for Windows
 # pipwin install pyaudio
 
 # Database dependencies
-asyncpg>=0.29.0
-psycopg2-binary>=2.9.9
+asyncpg>=0.28.0
+psycopg2-binary>=2.9.0
 
 # Security dependencies
-passlib[bcrypt]>=1.7.4
+passlib[bcrypt]>=1.7.0
 python-jose[cryptography]>=3.3.0
 
 # Testing dependencies
 pytest>=7.0.0
-pytest-asyncio>=0.21.0
+pytest-asyncio>=0.20.0
 pytest-mock>=3.10.0
 pytest-cov>=4.0.0
 httpx>=0.24.0

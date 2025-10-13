@@ -1,0 +1,29 @@
+# Simplified Voice CBT Setup
+# Easy to run, minimal dependencies
+
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/config.env
+    volumes:
+      - ./backend:/app
+      - ./data:/app/data  # For SQLite database
+    working_dir: /app
+
+# No complex databases - just SQLite file
+# Much simpler to manage!

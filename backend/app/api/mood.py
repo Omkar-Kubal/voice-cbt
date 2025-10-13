@@ -14,10 +14,18 @@ async def log_mood(mood_data: Dict[str, Any], db = Depends(get_database)):
     try:
         db_service = DatabaseService(db)
         
-        # Extract required fields
-        user_id = mood_data.get("user_id")
-        emotion = mood_data.get("emotion")
-        intensity = mood_data.get("intensity")
+        # Handle both direct format and nested mood_data format
+        if "mood_data" in mood_data:
+            # Nested format from tests
+            mood_info = mood_data["mood_data"]
+            user_id = mood_data.get("user_id")
+            emotion = mood_info.get("emotion")
+            intensity = mood_info.get("intensity")
+        else:
+            # Direct format
+            user_id = mood_data.get("user_id")
+            emotion = mood_data.get("emotion")
+            intensity = mood_data.get("intensity")
         
         if not all([user_id, emotion, intensity]):
             raise HTTPException(status_code=400, detail="Missing required fields: user_id, emotion, intensity")
