@@ -129,10 +129,10 @@ const EnhancedVoiceInterface: React.FC<EnhancedVoiceInterfaceProps> = ({
         const base64Audio = reader.result?.toString().split(',')[1];
         if (base64Audio) {
           // Process with enhanced audio processing
-          const response = await fetch('/api/v1/audio/process/enhanced', {
+          const response = await fetch('http://localhost:8000/api/v1/process/enhanced', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ audio_data: base64Audio })
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `audio_data=${encodeURIComponent(base64Audio)}`
           });
           
           const result = await response.json();
@@ -153,7 +153,7 @@ const EnhancedVoiceInterface: React.FC<EnhancedVoiceInterfaceProps> = ({
     
     setIsGeneratingVoice(true);
     try {
-      const response = await fetch('/api/v1/audio/tts/enhanced', {
+      const response = await fetch('http://localhost:8000/api/v1/tts/enhanced', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

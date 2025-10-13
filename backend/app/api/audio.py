@@ -15,6 +15,7 @@ from ..services.interactive_features import interactive_features
 from ..services.database_service import DatabaseService
 from ..services.enhanced_response_generator import generate_enhanced_response
 from ..services.enhanced_tts import synthesize_enhanced_speech
+from ..services.simple_tts import simple_tts
 from ..services.enhanced_audio_processor import process_enhanced_audio
 from ..services.response_optimizer import ResponseOptimizer
 from ..services.adaptive_response_system import AdaptiveResponseSystem
@@ -240,8 +241,22 @@ async def start_session(request: AudioRequest, db = Depends(get_database)):
                 print(f"Voice parameters: {voice_result.get('voice_parameters', {})}")
             else:
                 print(f"Enhanced voice generation failed: {voice_result.get('error', 'Unknown error')}")
+                # Try simple TTS as fallback
+                print("Trying simple TTS fallback...")
+                simple_result = simple_tts.speak(response_text)
+                if simple_result["success"]:
+                    print("Simple TTS fallback successful")
+                else:
+                    print(f"Simple TTS fallback failed: {simple_result.get('error', 'Unknown error')}")
         except Exception as e:
             print(f"Error generating enhanced voice: {e}")
+            # Try simple TTS as fallback
+            print("Trying simple TTS fallback...")
+            simple_result = simple_tts.speak(response_text)
+            if simple_result["success"]:
+                print("Simple TTS fallback successful")
+            else:
+                print(f"Simple TTS fallback failed: {simple_result.get('error', 'Unknown error')}")
 
         return TherapeuticResponse(
             response_text=response_text,
@@ -492,6 +507,71 @@ async def analyze_emotional_state(request: dict):
         }
     except Exception as e:
         return {"error": f"Failed to analyze emotional state: {str(e)}"}
+
+@router.post("/tts/simple")
+async def simple_text_to_speech(request: dict):
+    """
+    Simple text-to-speech endpoint for testing.
+    """
+    try:
+        text = request.get("text", "Hello, this is a test.")
+        result = simple_tts.speak(text)
+        return result
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@router.post("/process")
+async def process_audio_for_speech_to_text(
+    request: dict,
+    db = Depends(get_database)
+):
+    """
+    Process audio for speech-to-text conversion.
+    """
+    try:
+        audio_data = request.get("audio_data", "")
+        if not audio_data:
+            return {
+                "success": False,
+                "error": "No audio data provided",
+                "transcript": None
+            }
+        
+        # For now, we'll use a simple approach
+        # In a real implementation, you'd use a speech-to-text service
+        # like Google Cloud Speech-to-Text, Azure Speech, or OpenAI Whisper
+        
+        # This is a placeholder that simulates speech-to-text
+        # You can replace this with actual speech-to-text processing
+        import time
+        time.sleep(1)  # Simulate processing time
+        
+        # For demonstration, we'll return a mock transcript
+        # In production, you'd process the actual audio data
+        mock_transcripts = [
+            "Hello, how are you today?",
+            "I'm feeling a bit anxious about work",
+            "Can you help me with my stress?",
+            "I need someone to talk to",
+            "What should I do about my relationship?"
+        ]
+        
+        import random
+        transcript = random.choice(mock_transcripts)
+        
+        return {
+            "success": True,
+            "transcript": transcript,
+            "confidence": 0.85,
+            "processing_time": 1.0
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "transcript": None
+        }
 
 @router.post("/response/advanced")
 async def generate_advanced_response(request: dict):

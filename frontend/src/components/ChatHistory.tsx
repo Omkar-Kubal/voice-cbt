@@ -27,11 +27,24 @@ const ChatHistory = ({ messages }: ChatHistoryProps) => {
 
   // Format timestamp for display
   const formatTime = (timestamp: Date) => {
-    return new Intl.DateTimeFormat('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    }).format(timestamp);
+    try {
+      // Ensure timestamp is a valid Date object
+      const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
+      
+      // Check if the date is valid
+      if (isNaN(date.getTime())) {
+        return 'Invalid time';
+      }
+      
+      return new Intl.DateTimeFormat('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      }).format(date);
+    } catch (error) {
+      console.error('Error formatting time:', error);
+      return 'Invalid time';
+    }
   };
 
   // Get emotion color and icon

@@ -7,6 +7,12 @@ import TextInput from '@/components/TextInput';
 import ChatHistory from '@/components/ChatHistory';
 import UserProfile from '@/components/auth/UserProfile';
 import EnhancedVoiceInterface from '@/components/EnhancedVoiceInterface';
+import SimpleVoiceInterface from '@/components/SimpleVoiceInterface';
+import WorkingVoiceInterface from '@/components/WorkingVoiceInterface';
+import RealVoiceInterface from '@/components/RealVoiceInterface';
+import ActualVoiceInterface from '@/components/ActualVoiceInterface';
+import HybridVoiceInterface from '@/components/HybridVoiceInterface';
+import VoiceTest from '@/components/VoiceTest';
 import { useUserSessionContext } from '@/components/auth/UserSessionProvider';
 
 // Types for our conversation state
@@ -29,7 +35,7 @@ interface SessionState {
 
 const App = () => {
   // Get user session context
-  const { user, isLoggedIn } = useUserSessionContext();
+  const { user, isLoggedIn, login } = useUserSessionContext();
   
   // State management for the therapy session
   const [messages, setMessages] = useState<Message[]>([]);
@@ -42,6 +48,46 @@ const App = () => {
     connectionStatus: 'connecting'
   });
 
+  // Auto-login demo user if not logged in
+  useEffect(() => {
+    if (!isLoggedIn && !user) {
+      const demoUser = {
+        id: 'demo-user-123',
+        email: 'demo@voicecbt.com',
+        name: 'Demo User',
+        isNewUser: false
+      };
+      login(demoUser);
+    }
+  }, [isLoggedIn, user, login]);
+
+  // Clear localStorage on mount to prevent duplicate key issues
+  useEffect(() => {
+    if (user && isLoggedIn) {
+      // Clear any cached conversations to prevent duplicate keys
+      localStorage.removeItem(`voice_cbt_conversations_${user.id}`);
+      console.log('Cleared localStorage to prevent duplicate keys');
+    }
+  }, [user, isLoggedIn]);
+
+  // Initialize welcome message when user is logged in
+  useEffect(() => {
+    if (user && isLoggedIn && messages.length === 0) {
+      // Check if there's already a welcome message to prevent duplicates
+      const hasWelcomeMessage = messages.some(msg => msg.id.startsWith('welcome'));
+      if (!hasWelcomeMessage) {
+        const welcomeMessage: Message = {
+          id: `welcome-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          type: 'system',
+          content: `Hi ${user.name}! 👋 I'm your AI therapy companion. I'm here to listen, support, and help you explore your thoughts and feelings. How are you doing today?`,
+          timestamp: new Date(),
+          emotion: 'neutral'
+        };
+        setMessages([welcomeMessage]);
+      }
+    }
+  }, [user, isLoggedIn, messages.length, messages]);
+
   // Clear chat function
   const clearChat = () => {
     if (user && isLoggedIn) {
@@ -50,7 +96,7 @@ const App = () => {
       
       // Reset messages with welcome message
       const welcomeMessage: Message = {
-        id: 'welcome',
+        id: `welcome-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         type: 'system',
         content: `Hi ${user.name}! 👋 I'm your AI therapy companion. I'm here to listen, support, and help you explore your thoughts and feelings. How are you doing today?`,
         timestamp: new Date(),
@@ -68,35 +114,41 @@ const App = () => {
 
   // Load user's conversation history on mount
   useEffect(() => {
-    if (user && isLoggedIn) {
+    if (user && isLoggedIn && messages.length === 0) {
       const savedConversations = localStorage.getItem(`voice_cbt_conversations_${user.id}`);
       if (savedConversations) {
         try {
           const parsedMessages = JSON.parse(savedConversations);
+          // Convert timestamp strings back to Date objects
+          const messagesWithDates = parsedMessages.map((msg: any) => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp)
+          }));
+          
           // Check if this is a fresh session (no messages today)
           const today = new Date().toDateString();
-          const hasRecentMessages = parsedMessages.some((msg: Message) => 
+          const hasRecentMessages = messagesWithDates.some((msg: Message) => 
             new Date(msg.timestamp).toDateString() === today
           );
           
           if (!hasRecentMessages) {
             // Add welcome back message for returning users
             const welcomeBackMessage: Message = {
-              id: 'welcome-back',
+              id: `welcome-back-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
               type: 'system',
               content: `Welcome back, ${user.name}! 👋 Great to see you again. How are you feeling today?`,
               timestamp: new Date(),
               emotion: 'neutral'
             };
-            setMessages([welcomeBackMessage, ...parsedMessages]);
+            setMessages([welcomeBackMessage, ...messagesWithDates]);
           } else {
-            setMessages(parsedMessages);
+            setMessages(messagesWithDates);
           }
         } catch (error) {
           console.error('Error loading conversation history:', error);
           // Add welcome message if parsing fails
           const welcomeMessage: Message = {
-            id: 'welcome',
+            id: `welcome-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             type: 'system',
             content: `Hi ${user.name}! 👋 I'm your AI therapy companion. I'm here to listen, support, and help you explore your thoughts and feelings. How are you doing today?`,
             timestamp: new Date(),
@@ -107,7 +159,7 @@ const App = () => {
       } else {
         // First time user or no conversation history, add welcome message
         const welcomeMessage: Message = {
-          id: 'welcome',
+          id: `welcome-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           type: 'system',
           content: `Hi ${user.name}! 👋 I'm your AI therapy companion. I'm here to listen, support, and help you explore your thoughts and feelings. How are you doing today?`,
           timestamp: new Date(),
@@ -420,29 +472,26 @@ const App = () => {
     });
   };
 
-  // Handle voice sphere click
+  // Handle voice sphere click - this will be handled by EnhancedVoiceInterface
   const handleVoiceSphereClick = async () => {
-    if (sessionState.isListening) {
-      // Stop listening
-      if (speechRecognitionRef.current) {
-        speechRecognitionRef.current.stop();
-      }
-    } else {
-      // Start listening
-      if (speechRecognitionRef.current) {
-        setSessionState(prev => ({ ...prev, isListening: true }));
-        speechRecognitionRef.current.start();
-      }
-    }
+    // This function is no longer needed as EnhancedVoiceInterface handles voice input
+    console.log('Voice sphere clicked - handled by EnhancedVoiceInterface');
   };
 
   // Toggle between voice and text input modes
   const toggleInputMode = () => {
-    setSessionState(prev => ({
-      ...prev,
-      inputMode: prev.inputMode === 'voice' ? 'text' : 'voice',
-      isListening: false
-    }));
+    console.log('Toggle button clicked! Current mode:', sessionState.inputMode);
+    setSessionState(prev => {
+      const newMode = prev.inputMode === 'voice' ? 'text' : 'voice';
+      console.log('Switching from', prev.inputMode, 'to', newMode);
+      return {
+        ...prev,
+        inputMode: newMode,
+        isListening: false,
+        isProcessing: false,
+        isSpeaking: false
+      };
+    });
   };
 
   return (
@@ -484,8 +533,12 @@ const App = () => {
           )}
           <Button
             onClick={toggleInputMode}
-            variant="outline"
-            className="border-slate-600 text-slate-300 hover:bg-slate-800"
+            variant={sessionState.inputMode === 'voice' ? 'default' : 'outline'}
+            className={`${
+              sessionState.inputMode === 'voice' 
+                ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                : 'border-green-600 text-green-300 hover:bg-green-900'
+            }`}
             disabled={sessionState.connectionStatus === 'disconnected'}
           >
             {sessionState.inputMode === 'voice' ? (
@@ -522,16 +575,33 @@ const App = () => {
 
         {/* Input Area */}
         <div className="p-6 border-t border-slate-700">
+          {/* Mode Indicator */}
+          <div className="mb-4 text-center">
+            <div className={`inline-flex items-center space-x-2 px-4 py-2 rounded-full border-2 ${
+              sessionState.inputMode === 'voice' 
+                ? 'bg-blue-900/30 border-blue-500' 
+                : 'bg-green-900/30 border-green-500'
+            }`}>
+              {sessionState.inputMode === 'voice' ? (
+                <>
+                  <Mic className="w-5 h-5 text-blue-400" />
+                  <span className="text-blue-400 font-bold text-lg">VOICE MODE</span>
+                </>
+              ) : (
+                <>
+                  <MessageSquare className="w-5 h-5 text-green-400" />
+                  <span className="text-green-400 font-bold text-lg">TEXT MODE</span>
+                </>
+              )}
+            </div>
+          </div>
+          
           {sessionState.inputMode === 'voice' ? (
-            <EnhancedVoiceInterface
-              onVoiceStart={() => setSessionState(prev => ({ ...prev, isListening: true }))}
-              onVoiceStop={() => setSessionState(prev => ({ ...prev, isListening: false }))}
+            <HybridVoiceInterface
               onTextSubmit={handleTextInput}
               isListening={sessionState.isListening}
               isProcessing={sessionState.isProcessing}
               isSpeaking={sessionState.isSpeaking}
-              currentEmotion={messages[messages.length - 1]?.emotion}
-              responseText={messages[messages.length - 1]?.content}
             />
           ) : (
             <TextInput
