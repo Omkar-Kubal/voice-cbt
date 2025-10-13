@@ -2,7 +2,23 @@
 
 ## 🚀 Deploy Frontend to Vercel
 
-### Step 1: Prepare for Deployment
+### Method 1: GitHub Integration (Recommended)
+
+1. **Go to [Vercel Dashboard](https://vercel.com/dashboard)**
+2. **Click "New Project"**
+3. **Import from GitHub**:
+   - Select your `voice-cbt` repository
+   - Choose the `main` branch
+   - Set the **Root Directory** to `frontend`
+4. **Configure Build Settings**:
+   - Framework Preset: `Vite`
+   - Build Command: `npm run build`
+   - Output Directory: `dist`
+   - Install Command: `npm install`
+5. **Add Environment Variables** (see Step 3 below)
+6. **Click "Deploy"**
+
+### Method 2: Vercel CLI (Alternative)
 
 1. **Install Vercel CLI** (if not already installed):
    ```bash
@@ -14,19 +30,17 @@
    vercel login
    ```
 
-### Step 2: Deploy Frontend
-
-1. **Navigate to frontend directory**:
+3. **Navigate to frontend directory**:
    ```bash
    cd frontend
    ```
 
-2. **Deploy to Vercel**:
+4. **Deploy to Vercel**:
    ```bash
    vercel
    ```
 
-3. **Follow the prompts**:
+5. **Follow the prompts**:
    - Link to existing project? **No**
    - Project name: `voice-cbt-frontend`
    - Directory: `./frontend`
@@ -46,6 +60,26 @@ VITE_FIREBASE_API_KEY=your_firebase_api_key
 VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
 VITE_FIREBASE_PROJECT_ID=your_project_id
 ```
+
+## 🔄 Automatic Deployments with GitHub Integration
+
+### Benefits of GitHub Integration:
+
+1. **Automatic Deployments**: Every push to your main branch triggers a new deployment
+2. **Preview Deployments**: Pull requests get their own preview URLs
+3. **Easy Rollbacks**: One-click rollback to previous deployments
+4. **Team Collaboration**: Multiple developers can deploy without CLI access
+5. **Build History**: Complete deployment history and logs
+
+### Setting up Automatic Deployments:
+
+1. **Connect GitHub Repository**: Done during initial setup
+2. **Configure Branch Settings**:
+   - Production Branch: `main`
+   - Preview Branches: All other branches
+3. **Set up Environment Variables** for different environments:
+   - Production: `VITE_API_URL=https://your-prod-backend.railway.app`
+   - Preview: `VITE_API_URL=https://your-staging-backend.railway.app`
 
 ### Step 4: Deploy Backend (Alternative Options)
 
